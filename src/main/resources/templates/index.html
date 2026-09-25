@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veritas - Fake News Detector</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo-area">
+                <i class="fa-solid fa-shield-halved logo-icon"></i>
+                <span class="logo-text">VERITAS</span>
+            </div>
+            
+            <ul class="nav-links">
+                <li class="nav-item active" data-tab="home">
+                    <a href="/home" onclick="navigate('home', event)">
+                        <i class="fa-solid fa-house"></i>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-tab="analyze">
+                    <a href="/analyze" onclick="navigate('analyze', event)">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i>
+                        <span>Analyze</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-tab="dashboard">
+                    <a href="/dashboard" onclick="navigate('dashboard', event)">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-tab="history">
+                    <a href="/history" onclick="navigate('history', event)">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>History</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-tab="about">
+                    <a href="/about" onclick="navigate('about', event)">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>About</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <span class="version-tag">Version 1.0.0</span>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Alert banner for messages -->
+            <div id="alert-banner" class="alert-banner hidden">
+                <span id="alert-message"></span>
+                <button onclick="closeAlert()" class="close-alert-btn">&times;</button>
+            </div>
+
+            <!-- Tab: Home -->
+            <section id="tab-home" class="tab-pane active">
+                <div class="hero-container animate-fade-in">
+                    <div class="hero-badge"><i class="fa-solid fa-circle-check"></i> Transparent Classification Engine</div>
+                    <h1 class="hero-title">Know Before<br>You Share.</h1>
+                    <p class="hero-subtitle">
+                        Analyze news content using transparent text-based signals and machine learning classification. Discover patterns in writing styles, punctuation, and wording.
+                    </p>
+                    <div class="hero-actions">
+                        <button onclick="switchTab('analyze')" class="btn btn-primary btn-lg">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Analyze News
+                        </button>
+                        <button onclick="switchTab('about')" class="btn btn-secondary btn-lg">
+                            Learn How It Works
+                        </button>
+                    </div>
+                    <div class="hero-disclaimer">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <strong>Disclaimer:</strong> Automated classification is not a substitute for independent fact-checking or verified source research.
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Analyze -->
+            <section id="tab-analyze" class="tab-pane">
+                <div class="section-header">
+                    <h2>Analyze News Content</h2>
+                    <p>Enter text manually, paste an article, or scan a web URL.</p>
+                </div>
+
+                <!-- Input Workspace Card -->
+                <div class="card workspace-card" id="analyze-input-view">
+                    <div class="input-tabs">
+                        <button class="input-tab-btn active" onclick="switchInputMode('text')" id="tab-input-text">
+                            <i class="fa-solid fa-file-lines"></i> Copy-Paste Text
+                        </button>
+                        <button class="input-tab-btn" onclick="switchInputMode('url')" id="tab-input-url">
+                            <i class="fa-solid fa-link"></i> Scan Web URL
+                        </button>
+                    </div>
+
+                    <form id="analysis-form" onsubmit="runAnalysis(event)" class="workspace-form">
+                        <!-- Direct Text Area input -->
+                        <div id="group-text-input" class="input-group-container">
+                            <label for="news-text" class="input-label">Paste Headline & Full Article Content</label>
+                            <textarea id="news-text" placeholder="Type or paste the headline and main body of the article here (minimum 20 characters)..." class="form-textarea"></textarea>
+                            <div class="char-counter"><span id="char-count">0</span> / 50,000 characters</div>
+                        </div>
+
+                        <!-- URL input -->
+                        <div id="group-url-input" class="input-group-container hidden">
+                            <label for="news-url" class="input-label">News Article URL</label>
+                            <div class="url-input-wrapper">
+                                <i class="fa-solid fa-globe url-icon"></i>
+                                <input type="url" id="news-url" placeholder="https://example.com/news/article-headline" class="form-input">
+                            </div>
+                            <span class="input-help">The system will scrape and analyze the primary article content automatically. Access credentials or paywalled pages are not supported.</span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block btn-xl">
+                            <span id="btn-text"><i class="fa-solid fa-brain"></i> Analyze Content</span>
+                            <span id="btn-spinner" class="spinner hidden"></span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Scanner Loader -->
+                <div class="card workspace-card text-center hidden" id="analyze-loader-view">
+                    <div class="scanner-container">
+                        <div class="scanner-radar">
+                            <div class="radar-line"></div>
+                        </div>
+                        <h3 class="scanner-title">Scanning News Stylistics</h3>
+                        <p class="scanner-subtitle" id="scanner-status">Analyzing text structure, syntax punctuation, clickbait phrases, and calculating Naive Bayes probability...</p>
+                    </div>
+                </div>
+
+                <!-- Results Output Card -->
+                <div id="analyze-result-view" class="hidden animate-fade-in">
+                    <div class="result-layout">
+                        <!-- Left Panel: Score and Explanations -->
+                        <div class="result-main-panel">
+                            <div class="card result-card">
+                                <div class="result-header-row">
+                                    <div class="result-title-container">
+                                        <h3 id="res-headline" class="res-title-text">Article Title Placeholder</h3>
+                                        <div class="result-source-tag"><i class="fa-solid fa-database"></i> <span id="res-source-type">TEXT INPUT</span></div>
+                                    </div>
+                                    <button class="btn btn-icon-only" onclick="resetAnalysis()" title="Analyze new article">
+                                        <i class="fa-solid fa-rotate-left"></i>
+                                    </button>
+                                </div>
+
+                                <hr class="card-divider">
+
+                                <!-- Gauge & Score block -->
+                                <div class="score-summary-grid">
+                                    <div class="gauge-wrapper">
+                                        <div class="progress-ring-container">
+                                            <svg class="progress-ring" width="120" height="120">
+                                                <circle class="progress-ring__circle-bg" stroke="#f1f5f9" stroke-width="12" fill="transparent" r="50" cx="60" cy="60"/>
+                                                <circle id="res-score-ring" class="progress-ring__circle" stroke="#10b981" stroke-width="12" fill="transparent" r="50" cx="60" cy="60"/>
+                                            </svg>
+                                            <div class="progress-ring-text">
+                                                <span class="score-number" id="res-score-pct">82%</span>
+                                                <span class="score-lbl">Credibility</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="score-description-block">
+                                        <span class="meta-label">PREDICTION</span>
+                                        <h2 id="res-prediction-badge" class="prediction-text text-genuine">LIKELY GENUINE</h2>
+                                        
+                                        <div class="risk-meta-row">
+                                            <div>
+                                                <span class="meta-label">RISK LEVEL</span>
+                                                <span id="res-risk-badge" class="badge badge-low">LOW RISK</span>
+                                            </div>
+                                            <div>
+                                                <span class="meta-label">TIMESTAMP</span>
+                                                <span id="res-timestamp" class="meta-val">2026-08-20 12:00:00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Explanation Breakdown Card -->
+                            <div class="card result-card">
+                                <h3>Why This Result?</h3>
+                                <p class="card-subtitle">Transparent signal matching logs based on grammar, styling patterns, and text classification.</p>
+                                <ul id="res-indicators-list" class="indicators-list">
+                                    <!-- Dynamic elements go here -->
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Text Statistics -->
+                        <div class="result-sidebar-panel">
+                            <div class="card stats-card">
+                                <h3>Text Statistics</h3>
+                                <p class="card-subtitle">Stylistic metrics extracted during scan.</p>
+                                
+                                <div class="stats-item">
+                                    <div class="stats-label"><i class="fa-solid fa-list-ol"></i> Word Count</div>
+                                    <div class="stats-value" id="stats-words">245</div>
+                                </div>
+                                <div class="stats-item">
+                                    <div class="stats-label"><i class="fa-solid fa-paragraph"></i> Sentences</div>
+                                    <div class="stats-value" id="stats-sentences">12</div>
+                                </div>
+                                <div class="stats-item">
+                                    <div class="stats-label"><i class="fa-solid fa-font"></i> Character Count</div>
+                                    <div class="stats-value" id="stats-chars">1,482</div>
+                                </div>
+                                <div class="stats-item">
+                                    <div class="stats-label"><i class="fa-solid fa-exclamation"></i> Exclamations</div>
+                                    <div class="stats-value" id="stats-exclamations">0</div>
+                                </div>
+                                <div class="stats-item">
+                                    <div class="stats-label"><i class="fa-solid fa-question"></i> Questions</div>
+                                    <div class="stats-value" id="stats-questions">1</div>
+                                </div>
+                                <div class="stats-item">
+                                    <div class="stats-label"><i class="fa-solid fa-font-case"></i> ALL_CAPS Words</div>
+                                    <div class="stats-value" id="stats-caps">2</div>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-secondary btn-block btn-lg margin-top-md" onclick="resetAnalysis()">
+                                <i class="fa-solid fa-magnifying-glass"></i> Analyze Another Article
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Dashboard -->
+            <section id="tab-dashboard" class="tab-pane">
+                <div class="section-header">
+                    <h2>Analytical Dashboard</h2>
+                    <p>Aggregated real-time metrics and charts calculated from saved analysis histories.</p>
+                </div>
+
+                <!-- Loading / Empty View wrapper -->
+                <div id="dashboard-empty-state" class="card text-center margin-top-lg hidden">
+                    <div class="empty-state-content">
+                        <i class="fa-solid fa-folder-open empty-icon"></i>
+                        <h3>No Data Collected Yet</h3>
+                        <p>Perform a news analysis and save it to generate statistics charts.</p>
+                        <button onclick="switchTab('analyze')" class="btn btn-primary margin-top-md">Analyze News Now</button>
+                    </div>
+                </div>
+
+                <div id="dashboard-content-view">
+                    <!-- Metric Cards Row -->
+                    <div class="metrics-grid">
+                        <div class="card metric-card">
+                            <span class="metric-title">TOTAL ANALYSES</span>
+                            <h2 class="metric-number" id="dash-total">0</h2>
+                            <span class="metric-icon-bg"><i class="fa-solid fa-chart-bar"></i></span>
+                        </div>
+                        <div class="card metric-card">
+                            <span class="metric-title">LIKELY FAKE (HIGH RISK)</span>
+                            <h2 class="metric-number text-fake" id="dash-fake">0</h2>
+                            <span class="metric-icon-bg"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                        </div>
+                        <div class="card metric-card">
+                            <span class="metric-title">LIKELY GENUINE (LOW RISK)</span>
+                            <h2 class="metric-number text-genuine" id="dash-genuine">0</h2>
+                            <span class="metric-icon-bg"><i class="fa-solid fa-circle-check"></i></span>
+                        </div>
+                        <div class="card metric-card">
+                            <span class="metric-title">AVERAGE CONFIDENCE</span>
+                            <h2 class="metric-number" id="dash-avg-conf">0%</h2>
+                            <span class="metric-icon-bg"><i class="fa-solid fa-percent"></i></span>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="charts-grid margin-top-lg">
+                        <div class="card chart-card flex-2">
+                            <h3>Analysis Activity Timeline</h3>
+                            <p class="chart-subtitle">Frequency of checks logged over the past 7 days.</p>
+                            <div class="chart-container">
+                                <canvas id="chart-timeline"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card chart-card flex-1">
+                            <h3>Classification Ratio</h3>
+                            <p class="chart-subtitle">Percentage of checks classified by result.</p>
+                            <div class="chart-container">
+                                <canvas id="chart-distribution"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid margin-top-md">
+                        <div class="card chart-card flex-1">
+                            <h3>Risk Level Distribution</h3>
+                            <p class="chart-subtitle">Frequency of records categorized by risk status.</p>
+                            <div class="chart-container">
+                                <canvas id="chart-risk"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: History -->
+            <section id="tab-history" class="tab-pane">
+                <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h2>Analysis Logs & History</h2>
+                        <p>Review, filter, and inspect past news analyzes saved in the database.</p>
+                    </div>
+                    <button onclick="clearAllHistory()" class="btn btn-secondary btn-small" style="color: var(--fake-color); border-color: #fca5a5;" title="Delete all history records">
+                        <i class="fa-solid fa-trash-can"></i> Clear All History
+                    </button>
+                </div>
+
+                <!-- History Filters Panel -->
+                <div class="card filter-card">
+                    <div class="filters-grid">
+                        <div class="filter-group flex-2">
+                            <label for="history-search" class="filter-label">Search Content</label>
+                            <div class="search-input-wrapper">
+                                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                                <input type="text" id="history-search" placeholder="Search keywords in text or title..." oninput="triggerHistorySearch()" class="form-input">
+                            </div>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="filter-prediction" class="filter-label">Prediction</label>
+                            <select id="filter-prediction" onchange="triggerHistorySearch()" class="form-select">
+                                <option value="">All Categories</option>
+                                <option value="LIKELY_GENUINE">Likely Genuine</option>
+                                <option value="LIKELY_FAKE">Likely Fake</option>
+                                <option value="UNCERTAIN">Uncertain</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="filter-risk" class="filter-label">Risk Level</label>
+                            <select id="filter-risk" onchange="triggerHistorySearch()" class="form-select">
+                                <option value="">All Risks</option>
+                                <option value="LOW">Low Risk</option>
+                                <option value="MEDIUM">Medium Risk</option>
+                                <option value="HIGH">High Risk</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Table / List -->
+                <div class="card history-table-card margin-top-md">
+                    <div class="table-responsive">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Date/Time</th>
+                                    <th>Article / Input Summary</th>
+                                    <th>Type</th>
+                                    <th>Prediction</th>
+                                    <th>Confidence</th>
+                                    <th>Risk</th>
+                                    <th class="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-tbody">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- History Empty State -->
+                    <div id="history-empty-state" class="text-center pad-lg hidden">
+                        <i class="fa-solid fa-box-archive empty-icon"></i>
+                        <p class="margin-top-sm">No analysis records match the selected filters.</p>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination-footer hidden" id="history-pagination">
+                        <span class="pagination-info">Showing <span id="pag-start">1</span> to <span id="pag-end">10</span> of <span id="pag-total-items">24</span> records</span>
+                        <div class="pagination-controls">
+                            <button id="pag-prev" onclick="changeHistoryPage(-1)" class="btn btn-small btn-secondary"><i class="fa-solid fa-chevron-left"></i> Previous</button>
+                            <button id="pag-next" onclick="changeHistoryPage(1)" class="btn btn-small btn-secondary">Next <i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: About -->
+            <section id="tab-about" class="tab-pane">
+                <div class="section-header">
+                    <h2>About Veritas Detection Engine</h2>
+                    <p>A B.Tech Artificial Intelligence and Data Science project explaining transparent stylistic analytics.</p>
+                </div>
+
+                <div class="card about-card animate-fade-in">
+                    <h3>Classification vs Factual Truth</h3>
+                    <p>
+                        It is critical to clarify that <strong>this application cannot determine absolute, objective truth</strong>. Fact-checking requires exhaustive investigation of external events, corroborating interviews, and archival searches. 
+                    </p>
+                    <p>
+                        Instead, this system uses <strong>stylometric analysis</strong> and **probabilistic classification**. It acts as a stylistic filter by evaluating <em>how</em> a piece of news is written, rather than <em>what</em> it reports. Highly emotional, sensational, capitalized, or exclamation-heavy text with weak source indicators has a higher probability of matching writing styles found in fabricated articles.
+                    </p>
+
+                    <div class="about-alert margin-top-md">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <div>
+                            <strong>Core Philosophy:</strong> Veritas provides AI-assisted news analysis, not an oracle. Treat confidence values as style assessments, not factual guarantees.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="about-grid margin-top-lg">
+                    <div class="card about-card flex-1">
+                        <h3>Detection Pipeline</h3>
+                        <p>The system routes text through a multi-stage classification pipeline:</p>
+                        
+                        <div class="pipeline-steps">
+                            <div class="step">
+                                <div class="step-num">1</div>
+                                <div class="step-desc">
+                                    <strong>Text Preprocessing</strong>
+                                    <p>Cleans spacing, converts text to lowercase, handles character expansions, and strips punctuation.</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-num">2</div>
+                                <div class="step-desc">
+                                    <strong>Feature Extraction</strong>
+                                    <p>Computes capitalization index, exclamations, clickbait expressions, and source citations.</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-num">3</div>
+                                <div class="step-desc">
+                                    <strong>Naive Bayes + Rules Match</strong>
+                                    <p>Evaluates token probabilities trained on a sample dataset combined with rule weights.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card about-card flex-1">
+                        <h3>Technical Stack</h3>
+                        <table class="stack-table">
+                            <tr>
+                                <td><strong>Backend Engine</strong></td>
+                                <td>Java 17 / Spring Boot 3.x</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Data Store</strong></td>
+                                <td>Spring Data JPA / H2 In-Memory</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Web Scraping</strong></td>
+                                <td>JSoup HTML Parser</td>
+                            </tr>
+                            <tr>
+                                <td><strong>UI Templates</strong></td>
+                                <td>Thymeleaf Engine</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Data Graphics</strong></td>
+                                <td>Chart.js library</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- History Details Modal -->
+    <div id="details-modal" class="modal-backdrop hidden">
+        <div class="modal-card animate-slide-up">
+            <div class="modal-header">
+                <h3>Analysis Log Inspector</h3>
+                <button class="close-modal-btn" onclick="closeDetailsModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-content">
+                <!-- Loaded dynamically -->
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between;">
+                <button id="modal-delete-btn" class="btn btn-secondary" style="color: var(--fake-color); border-color: #fca5a5;" onclick="deleteCurrentModalRecord()">
+                    <i class="fa-solid fa-trash-can"></i> Delete This Record
+                </button>
+                <button class="btn btn-secondary" onclick="closeDetailsModal()">Close Inspector</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="/js/app.js"></script>
+</body>
+</html>

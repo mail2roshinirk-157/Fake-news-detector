@@ -1,0 +1,91 @@
+package com.example.fakenewsdetector.service;
+
+import org.springframework.stereotype.Service;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+public class TextPreprocessor {
+
+    // Common English stop words
+    private static final Set<String> STOP_WORDS = new HashSet<>(Arrays.asList(
+        "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as", "at",
+        "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't", "cannot", "could",
+        "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during", "each", "few", "for",
+        "from", "further", "had", "hadn't", "has", "hasn't", "have", "haven't", "having", "he", "he'd", "he'll", "he's",
+        "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm",
+        "i've", "if", "in", "into", "is", "isn't", "it", "it's", "its", "itself", "let's", "me", "more", "most", "mustn't",
+        "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our", "ours",
+        "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd", "she'll", "she's", "should", "shouldn't",
+        "so", "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there",
+        "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too",
+        "under", "until", "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've", "were", "weren't",
+        "what", "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's",
+        "with", "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself",
+        "yourselves"
+    ));
+
+    /**
+     * Preprocesses the input text for feature extraction and classification.
+     */
+    public String preprocess(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return "";
+        }
+        
+        // 1. Convert to lowercase
+        String processed = text.toLowerCase();
+
+        // 2. Handle repeated characters (e.g., "soooo" -> "so", "goood" -> "good")
+        // Reduces 3 or more consecutive identical characters to 2 characters
+        processed = processed.replaceAll("(.)\\1{2,}", "$1$1");
+
+        // 3. Remove punctuation except letters, numbers, and space
+        processed = processed.replaceAll("[^a-zA-Z0-9\\s]", " ");
+
+        // 4. Normalize whitespace
+        processed = processed.replaceAll("\\s+", " ").trim();
+
+        return processed;
+    }
+
+    /**
+     * Tokenizes a text into words.
+     */
+    public List<String> tokenize(String preprocessedText) {
+        if (preprocessedText == null || preprocessedText.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return Arrays.asList(preprocessedText.split("\\s+"));
+    }
+
+    /**
+     * Removes stop words from a list of tokens.
+     */
+    public List<String> removeStopWords(List<String> tokens) {
+        if (tokens == null) {
+            return new ArrayList<>();
+        }
+        return tokens.stream()
+                .filter(token -> !STOP_WORDS.contains(token))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Checks if a word is capitalized (used in feature extraction).
+     */
+    public boolean isFullyCapitalized(String word) {
+        if (word == null || word.length() < 2) {
+            return false;
+        }
+        // Only count alphabetical words
+        if (!word.matches("[A-Z]+")) {
+            return false;
+        }
+        return true;
+    }
+}
