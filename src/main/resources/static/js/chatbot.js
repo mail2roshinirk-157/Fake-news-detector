@@ -44,14 +44,14 @@
 
         // Handle Send click
         sendBtn.addEventListener("click", () => {
-            sendMessage();
+            sendChatbotMessage();
         });
 
         // Handle Enter vs Shift+Enter
         textarea.addEventListener("keydown", (e) => {
             if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                sendMessage();
+                sendChatbotMessage();
             }
         });
 
@@ -69,8 +69,40 @@
             `);
         }
 
-        // Send user message and query /api/analyze
-        function sendMessage() {
+        // Check for small talk / conversational intents
+        function getSmallTalkResponse(text) {
+            const clean = text.toLowerCase().trim().replace(/[!.,?]+$/, "").trim();
+
+            // Greetings
+            if (/^(hi+|hello+|hey+|howdy|hola|greetings|good\s*(morning|afternoon|evening|day)|hey\s*there|hello\s*there)(\s+(veritas|bot|assistant))?$/.test(clean)) {
+                return "Hey there! Paste a news headline or article and I'll check if it looks genuine or fake.";
+            }
+
+            // Thanks
+            if (/^(thanks?|thank\s*you(\s*(so\s*much|a\s*lot))?|thx|ty)(\s+(veritas|bot|assistant))?$/.test(clean)) {
+                return "You're welcome! Send me another headline anytime.";
+            }
+
+            // Identity / Capability
+            if (/^(who\s*(are\s*you|made\s*you)|what\s*(can\s*you\s*do|do\s*you\s*do|is\s*this|is\s*veritas)|tell\s*me\s*about\s*yourself)$/.test(clean)) {
+                return "I'm the Veritas Assistant. I analyze news text and tell you whether it looks genuine, fake, or uncertain, along with why.";
+            }
+
+            // Farewell
+            if (/^(bye+|goodbye+|see\s*ya|cya|take\s*care|good\s*night)(\s+(veritas|bot|assistant))?$/.test(clean)) {
+                return "Goodbye! Stay safe from misinformation.";
+            }
+
+            // Help
+            if (/^(help|how\s*to\s*use|how\s*does\s*(this|it)\s*work|guide)$/.test(clean)) {
+                return "Simply paste a news headline or full article text here. I will analyze its linguistic style, source attribution, and statistical signals to give you an instant credibility verdict!";
+            }
+
+            return null;
+        }
+
+        // Send user message and decide whether to reply conversationally or query /api/analyze
+        function sendChatbotMessage() {
             if (isAnalyzing) return;
 
             const text = textarea.value.trim();
@@ -83,7 +115,21 @@
             textarea.value = "";
             textarea.style.height = "40px";
 
-            // Render Placeholder "Analyzing..." Bubble
+            // 1. Check for small talk / conversational greetings
+            const smallTalkReply = getSmallTalkResponse(text);
+            if (smallTalkReply) {
+                appendBotBubble(escapeHtml(smallTalkReply));
+                return;
+            }
+
+            // 2. Check if text is too short or vague to be actual news content (< 6 words)
+            const words = text.split(/\s+/).filter(w => w.length > 0);
+            if (words.length < 6) {
+                appendBotBubble("That looks a bit short to analyze properly. Could you paste a full headline or a few sentences from the article?");
+                return;
+            }
+
+            // 3. Actual news content: Render Placeholder "Analyzing..." Bubble & call /api/analyze
             isAnalyzing = true;
             sendBtn.disabled = true;
             const placeholderEl = appendAnalyzingBubble();
@@ -118,6 +164,8 @@
                 scrollToBottom();
             });
         }
+
+        const sendMessage = sendChatbotMessage;
 
         // Render User Bubble
         function appendUserBubble(text) {
