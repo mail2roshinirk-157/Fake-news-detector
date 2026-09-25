@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Tesseract.js (Client-side OCR for News Image Analysis) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/chatbot.css">
@@ -539,7 +541,11 @@
 
             <!-- Input Area -->
             <div class="chatbot-input-area">
-                <textarea id="chatbot-input" class="chatbot-textarea" placeholder="Paste headline or news excerpt... (Enter to send, Shift+Enter for new line)" rows="1"></textarea>
+                <input type="file" id="chatbot-file-input" accept="image/*" style="display: none;">
+                <button type="button" id="chatbot-attach-btn" class="chatbot-attach-btn" title="Upload News Image / Screenshot" aria-label="Upload Image">
+                    <i class="fa-solid fa-image"></i>
+                </button>
+                <textarea id="chatbot-input" class="chatbot-textarea" placeholder="Paste headline, excerpt, or upload screenshot... (Enter to send)" rows="1"></textarea>
                 <button id="chatbot-send-btn" class="chatbot-send-btn" title="Send Message" aria-label="Send Message">
                     <i class="fa-solid fa-paper-plane"></i>
                 </button>

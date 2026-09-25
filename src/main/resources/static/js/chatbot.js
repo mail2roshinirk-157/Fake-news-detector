@@ -1,4 +1,4 @@
-// Veritas Assistant - Floating Chatbot Widget
+// Veritas Assistant - Floating Chatbot Widget with Image OCR Support
 
 (function () {
     let greetingShown = false;
@@ -11,6 +11,8 @@
         const sendBtn = document.getElementById("chatbot-send-btn");
         const textarea = document.getElementById("chatbot-input");
         const messages = document.getElementById("chatbot-messages");
+        const attachBtn = document.getElementById("chatbot-attach-btn");
+        const fileInput = document.getElementById("chatbot-file-input");
 
         if (!toggleBtn || !panel || !textarea || !sendBtn || !messages) {
             return;
@@ -61,11 +63,25 @@
             textarea.style.height = Math.min(textarea.scrollHeight, 80) + "px";
         });
 
+        // Handle Attachment / Image Upload Click
+        if (attachBtn && fileInput) {
+            attachBtn.addEventListener("click", () => {
+                if (isAnalyzing) return;
+                fileInput.click();
+            });
+
+            fileInput.addEventListener("change", (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                handleImageUpload(file);
+            });
+        }
+
         // One-time greeting message
         function showGreeting() {
             appendBotBubble(`
                 <strong>👋 Hello! I am the Veritas Assistant.</strong><br>
-                Paste any news headline or article excerpt here to get an instant credibility verdict, confidence score, and key indicators.
+                Paste any news headline or article excerpt here, or click the <i class="fa-solid fa-image"></i> button to upload a screenshot. I'll give you an instant credibility verdict, confidence score, and key indicators.
             `);
         }
 
@@ -95,26 +111,14 @@
 
             // Help
             if (/^(help|how\s*to\s*use|how\s*does\s*(this|it)\s*work|guide)$/.test(clean)) {
-                return "Simply paste a news headline or full article text here. I will analyze its linguistic style, source attribution, and statistical signals to give you an instant credibility verdict!";
+                return "Simply paste a news headline or full article text here, or upload an image. I will analyze its linguistic style, source attribution, and statistical signals to give you an instant credibility verdict!";
             }
 
             return null;
         }
 
-        // Send user message and decide whether to reply conversationally or query /api/analyze
-        function sendChatbotMessage() {
-            if (isAnalyzing) return;
-
-            const text = textarea.value.trim();
-            if (!text) return;
-
-            // Render User Bubble
-            appendUserBubble(text);
-
-            // Reset input field
-            textarea.value = "";
-            textarea.style.height = "40px";
-
+        // Shared text analysis pipeline (for both typed text and OCR extracted text)
+        function processMessageText(text) {
             // 1. Check for small talk / conversational greetings
             const smallTalkReply = getSmallTalkResponse(text);
             if (smallTalkReply) {
@@ -132,6 +136,7 @@
             // 3. Actual news content: Render Placeholder "Analyzing..." Bubble & call /api/analyze
             isAnalyzing = true;
             sendBtn.disabled = true;
+            if (attachBtn) attachBtn.disabled = true;
             const placeholderEl = appendAnalyzingBubble();
 
             // Call existing POST /api/analyze
@@ -161,17 +166,129 @@
             .finally(() => {
                 isAnalyzing = false;
                 sendBtn.disabled = false;
+                if (attachBtn) attachBtn.disabled = false;
                 scrollToBottom();
             });
         }
 
+        // Send user message and decide whether to reply conversationally or query /api/analyze
+        function sendChatbotMessage() {
+            if (isAnalyzing) return;
+
+            const text = textarea.value.trim();
+            if (!text) return;
+
+            // Render User Bubble
+            appendUserBubble(text);
+
+            // Reset input field
+            textarea.value = "";
+            textarea.style.height = "40px";
+
+            processMessageText(text);
+        }
+
         const sendMessage = sendChatbotMessage;
+
+        // Image upload and OCR processing
+        function handleImageUpload(file) {
+            if (isAnalyzing) return;
+
+            // Validate image MIME type
+            if (!file.type || !file.type.startsWith("image/")) {
+                appendBotBubble("⚠️ Please select a valid image file (PNG, JPG, JPEG, WEBP).", "bot-msg-error");
+                if (fileInput) fileInput.value = "";
+                return;
+            }
+
+            // 1. Show user image bubble thumbnail
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                appendUserImageBubble(evt.target.result, file.name);
+            };
+            reader.onerror = function() {
+                appendBotBubble("⚠️ Could not read the selected image file. Please try another.", "bot-msg-error");
+            };
+            reader.readAsDataURL(file);
+
+            // 2. Show "Reading text from the image..." bot bubble
+            isAnalyzing = true;
+            sendBtn.disabled = true;
+            if (attachBtn) attachBtn.disabled = true;
+
+            const readingBubbleEl = appendOcrReadingBubble();
+
+            // 3. Verify Tesseract is loaded
+            if (typeof Tesseract === "undefined") {
+                readingBubbleEl.remove();
+                renderErrorReply(appendBotBubble("", "bot-msg-error"), "OCR library (Tesseract.js) could not be loaded. Please check your internet connection.");
+                isAnalyzing = false;
+                sendBtn.disabled = false;
+                if (attachBtn) attachBtn.disabled = false;
+                if (fileInput) fileInput.value = "";
+                return;
+            }
+
+            // 4. Run Tesseract.js OCR
+            Tesseract.recognize(file, 'eng', {
+                logger: m => {
+                    if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+                        const pct = Math.round(m.progress * 100);
+                        const label = readingBubbleEl.querySelector(".ocr-status-text");
+                        if (label) {
+                            label.textContent = `Reading text from the image... (${pct}%)`;
+                        }
+                    }
+                }
+            })
+            .then(result => {
+                // Once OCR completes, remove the "Reading..." bubble
+                readingBubbleEl.remove();
+
+                const rawText = (result && result.data && result.data.text) ? result.data.text.trim() : "";
+                const cleanText = rawText.replace(/\r?\n+/g, " ").replace(/\s+/g, " ").trim();
+
+                // If OCR extracts little or no readable text (e.g. under ~15 characters)
+                if (!cleanText || cleanText.length < 15) {
+                    appendBotBubble("I couldn't read enough text from that image. Try a clearer photo or screenshot of the article.");
+                    return;
+                }
+
+                // Run extracted text through the SAME logic already used for typed messages
+                processMessageText(cleanText);
+            })
+            .catch(err => {
+                readingBubbleEl.remove();
+                appendBotBubble("⚠️ Unable to extract text from the image. Please try a clearer screenshot or upload a different image.", "bot-msg-error");
+            })
+            .finally(() => {
+                isAnalyzing = false;
+                sendBtn.disabled = false;
+                if (attachBtn) attachBtn.disabled = false;
+                if (fileInput) fileInput.value = "";
+                scrollToBottom();
+            });
+        }
 
         // Render User Bubble
         function appendUserBubble(text) {
             const div = document.createElement("div");
             div.className = "chatbot-msg user";
             div.textContent = text;
+            messages.appendChild(div);
+            scrollToBottom();
+        }
+
+        // Render User Image Thumbnail Bubble
+        function appendUserImageBubble(imgDataUrl, fileName) {
+            const div = document.createElement("div");
+            div.className = "chatbot-msg user";
+            div.innerHTML = `
+                <img src="${imgDataUrl}" class="chatbot-img-preview" alt="Uploaded news screenshot">
+                <div style="font-size: 11px; opacity: 0.95; display: flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-file-image"></i> <span>${escapeHtml(fileName || "image.png")}</span>
+                </div>
+            `;
             messages.appendChild(div);
             scrollToBottom();
         }
@@ -192,6 +309,21 @@
             div.className = "chatbot-msg bot analyzing";
             div.innerHTML = `
                 <span>Analyzing news content</span>
+                <div class="chatbot-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            messages.appendChild(div);
+            scrollToBottom();
+            return div;
+        }
+
+        // Render Placeholder Reading Bubble for OCR
+        function appendOcrReadingBubble() {
+            const div = document.createElement("div");
+            div.className = "chatbot-msg bot analyzing";
+            div.innerHTML = `
+                <span class="ocr-status-text">Reading text from the image...</span>
                 <div class="chatbot-dots">
                     <span></span><span></span><span></span>
                 </div>

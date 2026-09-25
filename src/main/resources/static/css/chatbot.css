@@ -314,6 +314,44 @@
     box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.12);
 }
 
+.chatbot-attach-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background-color: var(--bg-color);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+    transition: var(--transition-fast);
+}
+
+.chatbot-attach-btn:hover {
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.chatbot-attach-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.chatbot-img-preview {
+    max-width: 190px;
+    max-height: 140px;
+    border-radius: 8px;
+    display: block;
+    margin-bottom: 6px;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background-color: #000000;
+}
+
 .chatbot-send-btn {
     width: 38px;
     height: 38px;
